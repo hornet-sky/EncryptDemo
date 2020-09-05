@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>user register</title>
+    </head>
+    <body>
+        <h2>user register</h2>
+        name: <input id="name" value="Frank"><br>
+        salary: <input id="salary" value="65000"><br>
+        married: <input id="married" value="true"><br>
+        birthday: <input id="birthday" value="1988-10-06"><br>
+        <button id="submit">submit</button>
+    </body>
+    <script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+    <!-- 引入支持DEScbc模式加解密的js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js" integrity="sha512-nOQuvD9nKirvxDdvQ9OMqe2dgapbPB7vYAMrzJihw5m+aNcf0dX53m6YxM4LgA9u8e9eg9QX+/+mPu8kCNpV2A==" crossorigin="anonymous"></script>
+    <script>
+    $(() => {
+    	$("#submit").on("click", e => {
+    		const user = {
+   	            name: $("#name").val(),
+   	            salary: $("#salary").val(),
+   	            married: $("#married").val(),
+   	            birthday: $("#birthday").val()
+   	        }
+    		const reqBody = JSON.stringify(user);
+   	        const reqBodyEncrypted = encryptByDES(reqBody);
+   	        console.log("original request body: %s", reqBody)
+   	        console.log("encrypted request body: %s", reqBodyEncrypted)
+   	        console.log("decrypted request body: %s", decryptByDES(reqBodyEncrypted))
+   	        $.ajax("/user/register", {
+   	            type: "POST",
+   	            contentType: "application/json",
+   	            data: reqBodyEncrypted
+   	        }).done(respBody => {
+   	        	const respBodyDecrypted = decryptByDES(JSON.parse(respBody))
+   	        	console.log("original response body: %s", respBody)
+   	            console.log("decrypted response body: %s", respBodyDecrypted)
+   	            const result = JSON.parse(respBodyDecrypted)
+   	        	const user = result.data
+   	            alert("The result is [ id = " + user.id 
+   	            	+ ", name = " + user.name 
+   	            	+ ", salary = " + user.salary
+   	            	+ ", married = " + user.married
+   	            	+ ", birthday = " + user.birthday 
+   	            	+ "]")
+   	        })
+    	})
+    })
+    
+    // 加密、解密的细节不用关心，调下面的加解密函数就行
+    
+    // 前后端开发约定的加解密参数
+    const key = "b2c17b46e2b1415392aab5a82869856c"
+    const iv = "61960842"
+    
+    // 加密函数
+    function encryptByDES(message) {
+        const keyHex = CryptoJS.enc.Utf8.parse(key)
+        const ivHex = CryptoJS.enc.Utf8.parse(iv)
+        const encrypted = CryptoJS.TripleDES.encrypt(message, keyHex, {
+            iv: ivHex,
+            mode: CryptoJS.mode.CBC,
+            padding: CryptoJS.pad.Pkcs7
+        })
+        return CryptoJS.enc.Base64.stringify(encrypted.ciphertext)
+    }
+    
+    // 解密函数
+    function decryptByDES(ciphertext) {
+        const keyHex = CryptoJS.enc.Utf8.parse(key)
+        const ivHex = CryptoJS.enc.Utf8.parse(iv)
+        const decrypted = CryptoJS.TripleDES.decrypt({
+            ciphertext: CryptoJS.enc.Base64.parse(ciphertext)
+        }, keyHex, {
+            iv: ivHex, 
+            mode: CryptoJS.mode.CBC,
+            padding: CryptoJS.pad.Pkcs7
+        });
+        return decrypted.toString(CryptoJS.enc.Utf8)
+    }
+    </script>
+</html>
